@@ -3,13 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-const signInSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-});
-
-type SignInForm = z.infer<typeof signInSchema>;
+import { authSchema, type AuthData } from '@/lib/validation';
 
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -19,11 +13,11 @@ export function SignInForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignInForm>({
-    resolver: zodResolver(signInSchema),
+  } = useForm<AuthData>({
+    resolver: zodResolver(authSchema),
   });
 
-  const onSubmit = async (data: SignInForm) => {
+  const onSubmit = async (data: AuthData) => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/auth/signin', {

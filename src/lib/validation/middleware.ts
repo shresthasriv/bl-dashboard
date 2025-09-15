@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { validateWithZod } from './utils';
+
+export function withValidation<T>(
+  schema: z.ZodSchema<T>,
+  handler: (req: NextRequest, data: T) => Promise<NextResponse>
+) {
+  return async (req: NextRequest): Promise<NextResponse> => {
+    try {
+      let body;
+      
+      if (req.method === 'GET') {
+        const { searchParams } = new URL(req.url);
+        body = Object.fromEntries(searchParams.entries());
+        
+        // Convert string numbers to actual numbers
+        Object.keys(body).forEach(key => {
+          const value = body[key];
+          if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
+            body[key] = Number(value);
+          }
+        });
+      } else {
+        body = await req.json();
+      }
+
+      const validation = validateWithZod(schema, body);
+      
+      if (!validation.success) {
+        return NextResponse.json(
+          { 
+            error: 'Validation failed', 
+            details: validation.errors 
+          },
+          { status: 400 }
+        );
+      }
+
+      return await handler(req, validation.data!);
+    } catch (error) {
+      console.error('Validation middleware error:', error);
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400 }
+      );
+    }
+  };
+}
+
+export function withAuth(
+  handler: (req: NextRequest, userId: string) => Promise<NextResponse>
+) {
+  return async (req: NextRequest): Promise<NextResponse> => {
+    const token = req.cookies.get('session-token')?.value;
+    
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    try {
+      // JWT verification logic would go here
+      // For now, we'll extract userId from token payload
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.userId;
+
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'Invalid session' },
+          { status: 401 }
+        );
+      }
+
+      return await handler(req, userId);
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid session' },
+        { status: 401 }
+      );
+    }
+  };
+}
+
+export function withRateLimit(
+  requests: number = 10,
+  windowMs: number = 60000 // 1 minute
+) {
+  const requestCounts = new Map<string, { count: number; resetTime: number }>();
+
+  return function rateLimitMiddleware(
+    handler: (req: NextRequest) => Promise<NextResponse>
+  ) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      const now = Date.now();
+      
+      const record = requestCounts.get(ip);
+      
+      if (!record || now > record.resetTime) {
+        requestCounts.set(ip, { count: 1, resetTime: now + windowMs });
+        return await handler(req);
+      }
+      
+      if (record.count >= requests) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please try again later.' },
+          { status: 429 }
+        );
+      }
+      
+      record.count++;
+      return await handler(req);
+    };
+  };
+}
+
+export function compose(...middlewares: any[]) {
+  return function composedMiddleware(handler: any) {
+    return middlewares.reduceRight((acc, middleware) => {
+      return middleware(acc);
+    }, handler);
+  };
+}
+
