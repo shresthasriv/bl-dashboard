@@ -92,11 +92,15 @@ export const buyerFiltersSchema = z.object({
   propertyType: propertyTypeSchema.optional(),
   status: statusSchema.optional(),
   timeline: timelineSchema.optional(),
+  source: sourceSchema.optional(),
+  budgetMin: z.number().int().min(0).optional(),
+  budgetMax: z.number().int().min(0).optional(),
   search: z.string().optional(),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(10),
-  sortBy: z.enum(['fullName', 'createdAt', 'updatedAt', 'status']).default('updatedAt'),
+  sortBy: z.enum(['fullName', 'createdAt', 'updatedAt', 'budgetMax']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  ownerId: z.string().optional(),
 });
 
 export const csvImportRowSchema = z.object({
@@ -128,7 +132,7 @@ export const csvImportRowSchema = z.object({
 ).refine(
   (data) => {
     if (data.propertyType === 'Apartment' || data.propertyType === 'Villa') {
-      return data.bhk && data.bhk !== '';
+      return data.bhk !== undefined;
     }
     return true;
   },

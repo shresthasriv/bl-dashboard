@@ -40,33 +40,59 @@ export class BuyerRepository {
     return buyer;
   }
 
-  async findMany(filters: BuyerFilters): Promise<PaginatedResponse<any>> {
+  async findMany(filters: any): Promise<PaginatedResponse<any>> {
     const {
       city,
       propertyType,
       status,
       timeline,
+      source,
+      budgetMin,
+      budgetMax,
       search,
       page = 1,
       limit = 10,
       sortBy = 'updatedAt',
       sortOrder = 'desc',
+      ownerId
     } = filters;
 
     const skip = (page - 1) * limit;
     const where: Prisma.BuyerWhereInput = {};
 
+    if (ownerId) where.ownerId = ownerId;
     if (city) where.city = city;
     if (propertyType) where.propertyType = propertyType;
     if (status) where.status = status;
     if (timeline) where.timeline = timeline;
+    if (source) where.source = source;
 
     if (search) {
       where.OR = [
         { fullName: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
         { email: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } }
       ];
+    }
+
+    if (budgetMin !== undefined || budgetMax !== undefined) {
+      const budgetConditions = [];
+      if (budgetMin !== undefined) {
+        budgetConditions.push({ budgetMin: { gte: budgetMin } });
+        budgetConditions.push({ budgetMax: { gte: budgetMin } });
+      }
+      if (budgetMax !== undefined) {
+        budgetConditions.push({ budgetMin: { lte: budgetMax } });
+        budgetConditions.push({ budgetMax: { lte: budgetMax } });
+      }
+      
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: budgetConditions }];
+        delete where.OR;
+      } else {
+        where.OR = budgetConditions;
+      }
     }
 
     const [buyers, total] = await Promise.all([

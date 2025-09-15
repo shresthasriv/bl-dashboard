@@ -33,7 +33,7 @@ export function validateWithZod<T>(
 export function formatZodError(error: z.ZodError): Record<string, string[]> {
   const formattedErrors: Record<string, string[]> = {};
   
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const path = err.path.join('.');
     const key = path || '_general';
     

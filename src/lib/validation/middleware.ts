@@ -4,17 +4,60 @@ import { validateWithZod } from './utils';
 
 export function withValidation<T>(
   schema: z.ZodSchema<T>,
-  handler: (req: NextRequest, data: T) => Promise<NextResponse>
+  handler?: (req: NextRequest, data: T, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  if (!handler) {
+    return (actualHandler: (req: NextRequest, userId: string, data: T, ...args: any[]) => Promise<NextResponse>) => {
+      return async (req: NextRequest, userId: string, ...args: any[]): Promise<NextResponse> => {
+        try {
+          let body: any;
+          
+          if (req.method === 'GET') {
+            const { searchParams } = new URL(req.url);
+            body = Object.fromEntries(searchParams.entries());
+            
+            Object.keys(body).forEach(key => {
+              const value = body[key];
+              if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
+                body[key] = Number(value);
+              }
+            });
+          } else {
+            body = await req.json();
+          }
+
+          const validation = validateWithZod(schema, body);
+          
+          if (!validation.success) {
+            return NextResponse.json(
+              { 
+                error: 'Validation failed', 
+                details: validation.errors 
+              },
+              { status: 400 }
+            );
+          }
+
+          return await actualHandler(req, userId, validation.data!, ...args);
+        } catch (error) {
+          console.error('Validation middleware error:', error);
+          return NextResponse.json(
+            { error: 'Invalid request format' },
+            { status: 400 }
+          );
+        }
+      };
+    };
+  }
+
+  return async (req: NextRequest, ...args: any[]): Promise<NextResponse> => {
     try {
-      let body;
+      let body: any;
       
       if (req.method === 'GET') {
         const { searchParams } = new URL(req.url);
         body = Object.fromEntries(searchParams.entries());
         
-        // Convert string numbers to actual numbers
         Object.keys(body).forEach(key => {
           const value = body[key];
           if (typeof value === 'string' && !isNaN(Number(value)) && value !== '') {
@@ -37,7 +80,7 @@ export function withValidation<T>(
         );
       }
 
-      return await handler(req, validation.data!);
+      return await handler!(req, validation.data!, ...args);
     } catch (error) {
       console.error('Validation middleware error:', error);
       return NextResponse.json(
@@ -49,9 +92,9 @@ export function withValidation<T>(
 }
 
 export function withAuth(
-  handler: (req: NextRequest, userId: string) => Promise<NextResponse>
+  handler: (req: NextRequest, userId: string, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const token = req.cookies.get('session-token')?.value;
     
     if (!token) {
@@ -62,8 +105,6 @@ export function withAuth(
     }
 
     try {
-      // JWT verification logic would go here
-      // For now, we'll extract userId from token payload
       const payload = JSON.parse(atob(token.split('.')[1]));
       const userId = payload.userId;
 
@@ -74,7 +115,7 @@ export function withAuth(
         );
       }
 
-      return await handler(req, userId);
+      return await handler(req, userId, ...args);
     } catch (error) {
       return NextResponse.json(
         { error: 'Invalid session' },
@@ -94,7 +135,7 @@ export function withRateLimit(
     handler: (req: NextRequest) => Promise<NextResponse>
   ) {
     return async (req: NextRequest): Promise<NextResponse> => {
-      const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown';
+      const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
       const now = Date.now();
       
       const record = requestCounts.get(ip);

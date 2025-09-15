@@ -29,6 +29,6 @@ export interface CSVImportResult {
   errors: Array<{
     row: number;
     message: string;
-    data: Partial<CSVImportRow>;
+    data: Record<string, any>;
   }>;
 }
