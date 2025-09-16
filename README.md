@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Buyer Lead Intake (Next.js + Prisma + Postgres)
 
-## Getting Started
+## Setup
 
-First, run the development server:
+1) Requirements
+- Node 18+
+- Postgres (Supabase works)
 
+2) Environment variables
+Create `.env` with:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DB
+APP_URL=http://localhost:3000
+# Optional for real emails (Resend)
+RESEND_API_KEY=your_resend_api_key
+EMAIL_FROM="Esahayak <no-reply@yourdomain.com>"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3) Install
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4) Database (Prisma)
+- Generate client and run migrations
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
+- If developing locally without prior migrations:
+```bash
+npx prisma migrate dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+5) Run locally
+```bash
+npm run dev
+```
+App: `http://localhost:3000`
 
-## Learn More
+6) Auth (Magic Link)
+- In development (without RESEND_API_KEY): the link is logged to the console.
+- Dev helper to login without email after submitting the form: a “Click here to login” link appears.
+- Production: set `RESEND_API_KEY` and `EMAIL_FROM` to send real emails via Resend.
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Design Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Validation
+  - Zod schemas live in `src/lib/validation/schemas.ts`.
+  - API validation via `withValidation` middleware (parses body/URL params, coerces numbers, returns 400 with details).
 
-## Deploy on Vercel
+- Authentication
+  - Magic link flow in `src/app/api/auth/signin/route.ts` and `src/app/api/auth/verify/route.ts`.
+  - Sessions stored in DB; JWT stored as secure cookie `session-token`.
+  - Auth guard via `withAuth` (extracts userId from cookie) on protected routes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Authorization / Ownership
+  - Service + repository enforce owner scoping.
+  - Reads/writes check `ownerId` in `BuyerRepository` (e.g., `findById`, `findMany`, `getHistory`, `update`, `delete`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Architecture
+  - App Router (Next.js), SSR for list/detail pages; client components for forms, search, filters.
+  - Repository pattern under `src/lib/db/repositories/*`.
+  - Service layer in `src/services/*` encapsulates business logic and history tracking.
+  - Middleware in `src/lib/validation/middleware.ts` (auth, validation, rate limiting, compose).
+
+- UI
+  - Tailwind CSS with high-contrast defaults (inputs are `bg-white text-gray-900`).
+  - Forms: React Hook Form + Zod. Client-side UX improvements (debounced search/filters, URL sync, no scroll on replace).
+  - History refetch: quick-status emits an event, history listens and refetches.
+
+
+## What’s Done vs Skipped
+
+Done
+- Buyers CRUD with ownership checks and audit history (`buyer_history`).
+- SSR list with filters, debounced search, URL state, sorting, pagination.
+- Create/Edit forms with validation and clean UI components.
+- CSV import/export with validation.
+- Magic link auth (custom) with dev fallback and Resend integration for real emails.
+- Rate limiting middleware for sensitive endpoints.
+- Error boundary wrapper and consistent API error handling.
+
+Nice-to-haves implemented
+- Quick status actions with live history refresh.
+- Tag input (chips) on buyers.
+
+Pending / Skipped (and why)
+- Comprehensive tests (unit/e2e): skipped for time.
+- Advanced accessibility pass: basic semantics in place; deeper audit pending.
+- Full-text search across all fields via DB index: current approach uses `contains` filters; FT index can be added later.
+- Deployment config/guide: app is Vercel-ready; provide environment vars and database URL there.
+
+
+## Common Commands
+
+```bash
+# Type check
+npm run type-check
+
+# Lint
+npm run lint
+
+# Build
+npm run build
+```
+
+## Notable Paths
+- Pages: `src/app/buyers/*`
+- API: `src/app/api/*`
+- Services: `src/services/*`
+- Repositories: `src/lib/db/repositories/*`
+- Validation: `src/lib/validation/*`
+- Auth helpers: `src/lib/auth.ts`
+- Email: `src/lib/email.ts`
