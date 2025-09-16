@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BuyerService } from '@/services/buyer.service';
-import { updateBuyerSchema } from '@/lib/validation';
+import { updateBuyerBodySchema } from '@/lib/validation';
 import { withValidation, withAuth, withRateLimit, compose } from '@/lib/validation/middleware';
 import { handleApiError } from '@/lib/errors';
 
 const buyerService = new BuyerService();
 
-async function getBuyerHandler(req: NextRequest, userId: string, context: { params: { id: string } }) {
-  const buyer = await buyerService.getBuyer(context.params.id, userId);
+async function getBuyerHandler(req: NextRequest, userId: string, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  const buyer = await buyerService.getBuyer(id, userId);
   
   if (!buyer) {
     return NextResponse.json(
@@ -26,10 +27,11 @@ async function updateBuyerHandler(
   req: NextRequest, 
   userId: string, 
   data: any,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const buyer = await buyerService.updateBuyer(context.params.id, data, userId);
+    const { id } = await context.params;
+    const buyer = await buyerService.updateBuyer(id, data, userId);
     
     return NextResponse.json({
       success: true,
@@ -45,9 +47,10 @@ async function updateBuyerHandler(
   }
 }
 
-async function deleteBuyerHandler(req: NextRequest, userId: string, context: { params: { id: string } }) {
+async function deleteBuyerHandler(req: NextRequest, userId: string, context: { params: Promise<{ id: string }> }) {
   try {
-    await buyerService.deleteBuyer(context.params.id, userId);
+    const { id } = await context.params;
+    await buyerService.deleteBuyer(id, userId);
     
     return NextResponse.json({
       success: true,
@@ -62,21 +65,21 @@ async function deleteBuyerHandler(req: NextRequest, userId: string, context: { p
   }
 }
 
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return withAuth((req, userId) => getBuyerHandler(req, userId, context))(req);
 }
 
-export async function PUT(req: NextRequest, context: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return compose(
     withRateLimit(30, 60000),
     withAuth,
-    withValidation(updateBuyerSchema)
-  )((req: NextRequest, userId: string, data: any) => 
+    withValidation(updateBuyerBodySchema)
+  )((req: NextRequest, data: any, userId: string) => 
     updateBuyerHandler(req, userId, data, context)
   )(req);
 }
 
-export async function DELETE(req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   return compose(
     withRateLimit(10, 60000),
     withAuth

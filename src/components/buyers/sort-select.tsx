@@ -39,7 +39,7 @@ export function SortSelect({ sortBy, sortOrder }: SortSelectProps) {
         const [newSortBy, newSortOrder] = e.target.value.split(':');
         updateSort(newSortBy, newSortOrder);
       }}
-      className="text-sm border-gray-300 rounded-md focus:border-blue-500 focus:ring-blue-500"
+      className="text-sm rounded-lg border-2 border-gray-300 bg-white text-gray-900 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
     >
       {sortOptions.map((option) => (
         <option key={option.value} value={option.value}>

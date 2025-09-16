@@ -8,6 +8,7 @@ import { authSchema, type AuthData } from '@/lib/validation';
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [devLink, setDevLink] = useState<string | null>(null);
 
   const {
     register,
@@ -19,6 +20,7 @@ export function SignInForm() {
 
   const onSubmit = async (data: AuthData) => {
     setIsLoading(true);
+    setDevLink(null);
     try {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -28,6 +30,14 @@ export function SignInForm() {
 
       if (response.ok) {
         setIsSubmitted(true);
+        if (process.env.NODE_ENV !== 'production') {
+          // Dev-only endpoint to retrieve magic link without email
+          const res = await fetch(`/api/auth/dev-magic-link?email=${encodeURIComponent(data.email)}`);
+          if (res.ok) {
+            const { magicLink } = await res.json();
+            setDevLink(magicLink);
+          }
+        }
       } else {
         console.error('Sign in failed');
       }
@@ -40,10 +50,26 @@ export function SignInForm() {
 
   if (isSubmitted) {
     return (
-      <div className="rounded-md bg-green-50 p-4">
-        <div className="text-sm text-green-700">
-          Check your email for a magic link to sign in.
+      <div className="space-y-3">
+        <div className="rounded-md bg-green-50 p-4">
+          <div className="text-sm text-green-700">
+            Check your email for a magic link to sign in.
+          </div>
         </div>
+        {process.env.NODE_ENV !== 'production' && devLink && (
+          <div className="rounded-md bg-blue-50 p-4">
+            <div className="text-sm text-blue-700">
+              Development: 
+              <button
+                type="button"
+                onClick={() => { window.location.href = devLink; }}
+                className="underline font-medium"
+              >
+                Click here to login
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

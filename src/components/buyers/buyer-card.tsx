@@ -20,7 +20,7 @@ export function BuyerCard({ buyer }: BuyerCardProps) {
 
   return (
     <Link href={`/buyers/${buyer.id}`}>
-      <div className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+      <div className="border border-gray-300 rounded-xl p-6 hover:shadow-md hover:border-gray-400 transition-all bg-white">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
@@ -30,7 +30,7 @@ export function BuyerCard({ buyer }: BuyerCardProps) {
               </span>
             </div>
 
-            <div className="space-y-1 text-sm text-gray-600">
+            <div className="space-y-1 text-sm text-gray-800">
               {buyer.email && (
                 <div className="flex items-center">
                   <EnvelopeIcon className="h-4 w-4 mr-1.5" />
@@ -53,15 +53,15 @@ export function BuyerCard({ buyer }: BuyerCardProps) {
               {buyer.propertyType}
               {buyer.bhk && ` - ${buyer.bhk} BHK`}
             </div>
-            <div className="text-gray-600">
+            <div className="text-gray-800">
               {buyer.purpose}
             </div>
             {(buyer.budgetMin || buyer.budgetMax) && (
-              <div className="text-gray-600">
+              <div className="text-gray-800">
                 {formatCurrency(buyer.budgetMin)} - {formatCurrency(buyer.budgetMax)}
               </div>
             )}
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-gray-700 mt-1">
               {formatDate(buyer.createdAt)}
             </div>
           </div>
@@ -72,7 +72,7 @@ export function BuyerCard({ buyer }: BuyerCardProps) {
             {buyer.tags.map((tag: string, index: number) => (
               <span
                 key={index}
-                className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded"
+                className="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs rounded"
               >
                 {tag}
               </span>
@@ -81,7 +81,7 @@ export function BuyerCard({ buyer }: BuyerCardProps) {
         )}
 
         {buyer.notes && (
-          <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+          <div className="mt-2 text-sm text-gray-800 line-clamp-2">
             {buyer.notes}
           </div>
         )}

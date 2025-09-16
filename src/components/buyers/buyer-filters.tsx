@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { City, PropertyType, Status, Timeline, Source } from '@prisma/client';
+import { useState, useEffect } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
 
 interface BuyerFiltersProps {
   searchParams: Record<string, string | undefined>;
@@ -10,6 +12,20 @@ interface BuyerFiltersProps {
 export function BuyerFilters({ searchParams }: BuyerFiltersProps) {
   const router = useRouter();
   const urlSearchParams = useSearchParams();
+
+  const [budgetMinInput, setBudgetMinInput] = useState<string>(searchParams.budgetMin || '');
+  const [budgetMaxInput, setBudgetMaxInput] = useState<string>(searchParams.budgetMax || '');
+
+  // Keep local state in sync if URL changes externally
+  useEffect(() => {
+    if ((searchParams.budgetMin || '') !== budgetMinInput) {
+      setBudgetMinInput(searchParams.budgetMin || '');
+    }
+    if ((searchParams.budgetMax || '') !== budgetMaxInput) {
+      setBudgetMaxInput(searchParams.budgetMax || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.budgetMin, searchParams.budgetMax]);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(urlSearchParams);
@@ -22,21 +38,29 @@ export function BuyerFilters({ searchParams }: BuyerFiltersProps) {
     
     params.delete('page');
     
-    router.replace(`/buyers?${params.toString()}`);
+    router.replace(`/buyers?${params.toString()}`, { scroll: false });
   };
+
+  const debouncedUpdateMin = useDebouncedCallback((value: string) => {
+    updateFilter('budgetMin', value);
+  }, 300);
+
+  const debouncedUpdateMax = useDebouncedCallback((value: string) => {
+    updateFilter('budgetMax', value);
+  }, 300);
 
   const clearFilters = () => {
     const params = new URLSearchParams();
     const search = urlSearchParams.get('search');
     if (search) params.set('search', search);
     
-    router.replace(`/buyers?${params.toString()}`);
+    router.replace(`/buyers?${params.toString()}`, { scroll: false });
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-gray-900">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-gray-900">Filters</h3>
+        <h3 className="font-semibold">Filters</h3>
         <button
           onClick={clearFilters}
           className="text-sm text-blue-600 hover:text-blue-700"
@@ -97,21 +121,31 @@ export function BuyerFilters({ searchParams }: BuyerFiltersProps) {
         />
 
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Budget Range</label>
-          <div className="flex space-x-2">
+          <label className="block text-sm font-semibold text-gray-900">Budget Range</label>
+          <div className="flex flex-col space-y-2">
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="Min"
-              value={searchParams.budgetMin || ''}
-              onChange={(e) => updateFilter('budgetMin', e.target.value)}
-              className="flex-1 rounded-md border-gray-300 text-sm"
+              value={budgetMinInput}
+              onChange={(e) => {
+                setBudgetMinInput(e.target.value);
+                debouncedUpdateMin(e.target.value);
+              }}
+              className="w-full rounded-lg border-2 border-gray-300 bg-white text-sm text-gray-900 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
             />
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="Max"
-              value={searchParams.budgetMax || ''}
-              onChange={(e) => updateFilter('budgetMax', e.target.value)}
-              className="flex-1 rounded-md border-gray-300 text-sm"
+              value={budgetMaxInput}
+              onChange={(e) => {
+                setBudgetMaxInput(e.target.value);
+                debouncedUpdateMax(e.target.value);
+              }}
+              className="w-full rounded-lg border-2 border-gray-300 bg-white text-sm text-gray-900 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -130,13 +164,13 @@ interface FilterSelectProps {
 function FilterSelect({ label, value, onChange, options }: FilterSelectProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label className="block text-sm font-semibold text-gray-900 mb-1">
         {label}
       </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-md border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500"
+        className="block w-full rounded-lg border-2 border-gray-300 bg-white text-sm text-gray-900 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

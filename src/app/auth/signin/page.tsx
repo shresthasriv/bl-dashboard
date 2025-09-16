@@ -5,8 +5,9 @@ import { SignInForm } from '@/components/auth/signin-form';
 export default async function SignInPage({ 
   searchParams 
 }: { 
-  searchParams: { error?: string } 
+  searchParams: Promise<{ error?: string }> 
 }) {
+  const params = await searchParams;
   const user = await getSession();
   
   if (user) {
@@ -26,7 +27,7 @@ export default async function SignInPage({
     }
   };
 
-  const errorMessage = getErrorMessage(searchParams.error);
+  const errorMessage = getErrorMessage(params.error);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

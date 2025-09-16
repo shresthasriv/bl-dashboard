@@ -6,6 +6,7 @@ import { BuyerSearch } from '@/components/buyers/buyer-search';
 import { BuyerFilters } from '@/components/buyers/buyer-filters';
 import { BuyerStats } from '@/components/buyers/buyer-stats';
 import { CreateBuyerButton } from '@/components/buyers/create-buyer-button';
+import { ImportExportButtons } from '@/components/buyers/import-export-buttons';
 
 interface SearchParams extends Record<string, string | undefined> {
   page?: string;
@@ -22,10 +23,11 @@ interface SearchParams extends Record<string, string | undefined> {
 }
 
 interface BuyersPageProps {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }
 
 export default async function BuyersPage({ searchParams }: BuyersPageProps) {
+  const params = await searchParams;
   const user = await getSession();
   
   if (!user) {
@@ -33,32 +35,35 @@ export default async function BuyersPage({ searchParams }: BuyersPageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="py-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Buyer Leads</h1>
-          <p className="text-gray-600">Manage and track your buyer leads</p>
+          <h1 className="text-4xl font-bold text-gray-900">Buyer Leads</h1>
+          <p className="text-base text-gray-800 mt-2">Manage and track your buyer leads</p>
         </div>
-        <CreateBuyerButton />
+        <div className="flex items-center gap-4">
+          <ImportExportButtons searchParams={params} />
+          <CreateBuyerButton />
+        </div>
       </div>
 
-      <Suspense fallback={<div className="animate-pulse bg-gray-200 h-32 rounded-lg" />}>
+      <Suspense fallback={<div className="animate-pulse bg-gray-200 h-32 rounded-xl" />}>
         <BuyerStats />
       </Suspense>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <div className="p-6 border-b">
-          <BuyerSearch initialValue={searchParams.search || ''} />
+      <div className="bg-white rounded-xl border border-gray-300 shadow-md">
+        <div className="p-8 border-b border-gray-200">
+          <BuyerSearch initialValue={params.search || ''} />
         </div>
         
         <div className="flex">
-          <div className="w-64 border-r p-6">
-            <BuyerFilters searchParams={searchParams} />
+          <div className="w-80 border-r border-gray-200 p-8 bg-gray-50">
+            <BuyerFilters searchParams={params} />
           </div>
           
           <div className="flex-1">
             <Suspense fallback={<BuyerListSkeleton />}>
-              <BuyerList searchParams={searchParams} userId={user.id} />
+              <BuyerList searchParams={params} userId={user.id} />
             </Suspense>
           </div>
         </div>

@@ -38,7 +38,7 @@ export function withValidation<T>(
             );
           }
 
-          return await actualHandler(req, userId, validation.data!, ...args);
+          return await actualHandler(req, validation.data!, userId, ...args);
         } catch (error) {
           console.error('Validation middleware error:', error);
           return NextResponse.json(

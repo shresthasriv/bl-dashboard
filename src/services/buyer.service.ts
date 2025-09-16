@@ -8,9 +8,21 @@ export class BuyerService {
 
   async createBuyer(data: CreateBuyer, ownerId: string): Promise<any> {
     const buyer = await this.buyerRepo.create({
-      ...data,
-      owner: { connect: { id: ownerId } },
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      city: data.city,
+      propertyType: data.propertyType,
+      bhk: data.bhk,
+      purpose: data.purpose,
+      budgetMin: data.budgetMin,
+      budgetMax: data.budgetMax,
+      timeline: data.timeline,
+      source: data.source,
+      status: data.status || 'New',
+      notes: data.notes,
       tags: data.tags || [],
+      owner: { connect: { id: ownerId } },
     });
 
     await this.buyerRepo.createHistory(buyer.id, ownerId, {
@@ -70,6 +82,10 @@ export class BuyerService {
 
   async getBuyerStats(ownerId?: string) {
     return this.buyerRepo.getStats(ownerId);
+  }
+
+  async getBuyerHistory(buyerId: string, ownerId: string) {
+    return this.buyerRepo.getHistory(buyerId, ownerId);
   }
 
   async bulkCreateBuyers(buyers: CreateBuyer[], ownerId: string) {

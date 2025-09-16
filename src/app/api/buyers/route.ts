@@ -5,7 +5,7 @@ import { withValidation, withAuth, withRateLimit, compose } from '@/lib/validati
 
 const buyerService = new BuyerService();
 
-async function getBuyersHandler(req: NextRequest, userId: string, filters: any) {
+async function getBuyersHandler(req: NextRequest, filters: any, userId: string) {
   const result = await buyerService.getAllBuyers(filters, userId);
   
   return NextResponse.json({
@@ -15,7 +15,9 @@ async function getBuyersHandler(req: NextRequest, userId: string, filters: any) 
   });
 }
 
-async function createBuyerHandler(req: NextRequest, userId: string, data: any) {
+async function createBuyerHandler(req: NextRequest, data: any, userId: string) {
+  console.log('Handler received data:', data);
+  console.log('Handler received userId:', userId);
   const buyer = await buyerService.createBuyer(data, userId);
   
   return NextResponse.json({
@@ -32,6 +34,6 @@ export const GET = compose(
 
 export const POST = compose(
   withRateLimit(20, 60000),
-  withAuth,
+  withAuth,  
   withValidation(createBuyerSchema)
 )(createBuyerHandler);

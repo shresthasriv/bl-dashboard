@@ -87,6 +87,9 @@ export const updateBuyerSchema = createBuyerSchema.partial().extend({
   id: z.string().uuid(),
 });
 
+// For PUT /api/buyers/[id] route body validation: do not require id in the body
+export const updateBuyerBodySchema = createBuyerSchema.partial();
+
 export const buyerFiltersSchema = z.object({
   city: citySchema.optional(),
   propertyType: propertyTypeSchema.optional(),

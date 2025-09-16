@@ -77,7 +77,7 @@ export class BuyerRepository {
     }
 
     if (budgetMin !== undefined || budgetMax !== undefined) {
-      const budgetConditions = [];
+      const budgetConditions = [] as Prisma.BuyerWhereInput[];
       if (budgetMin !== undefined) {
         budgetConditions.push({ budgetMin: { gte: budgetMin } });
         budgetConditions.push({ budgetMax: { gte: budgetMin } });
@@ -165,6 +165,25 @@ export class BuyerRepository {
         buyerId,
         changedBy,
         diff,
+      },
+    });
+  }
+
+  async getHistory(buyerId: string, ownerId: string) {
+    // verify ownership
+    const buyer = await prisma.buyer.findFirst({
+      where: { id: buyerId, ownerId },
+      select: { id: true },
+    });
+    if (!buyer) return [];
+
+    return prisma.buyerHistory.findMany({
+      where: { buyerId },
+      orderBy: { changedAt: 'desc' },
+      include: {
+        changedByUser: {
+          select: { id: true, name: true, email: true },
+        },
       },
     });
   }
